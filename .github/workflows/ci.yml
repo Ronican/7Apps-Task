@@ -1,0 +1,80 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:14
+        env:
+          POSTGRES_USER: your_db_user
+          POSTGRES_PASSWORD: your_db_password
+          POSTGRES_DB: pdf_chat_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Wait for PostgreSQL
+        run: |
+          for i in {1..30}; do
+            pg_isready -h localhost -p 5432 -U your_db_user && break
+            echo "Waiting for PostgreSQL..."
+            sleep 1
+          done
+
+      - name: Wait for Redis
+        run: |
+          for i in {1..30}; do
+            redis-cli -h localhost -p 6379 ping && break
+            echo "Waiting for Redis..."
+            sleep 1
+          done
+
+      - name: Run Tests
+        env:
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_NAME: pdf_chat_db
+          DB_USER: your_db_user
+          DB_PASSWORD: your_db_password
+          REDIS_HOST: localhost
+          REDIS_PORT: 6379
+          GEMINI_API_KEY: your_gemini_api_key
+          SENTRY_DSN: your_sentry_dsn
+        run: |
+          pytest --cov=app tests/
