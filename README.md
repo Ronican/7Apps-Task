@@ -104,7 +104,7 @@ This project is a FastAPI application that allows users to upload PDF documents 
      ```sql
      CREATE DATABASE pdf_chat_db;
      ```
-   - Run database migrations (if applicable).
+   - Run database migrations.
 
 3. **Load Environment Variables**
    - Ensure that your application loads the environment variables. Add the following to your `app/main.py` if not already included:
